@@ -6,11 +6,11 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const TEBEX_KEY = process.env.TEBEX_KEY;
+const TEBEX_KEY = process.env.6SOtdoLrwdjjnAwz5DfBhZO3UfwUSGR1;
 
 app.get("/store", async (req, res) => {
   const r = await fetch("https://plugin.tebex.io/categories", {
-    headers: { "X-Tebex-Secret": TEBEX_KEY }
+    headers: { "X-Tebex-Secret": 6SOtdoLrwdjjnAwz5DfBhZO3UfwUSGR1 }
   });
   res.json(await r.json());
 });
@@ -21,18 +21,18 @@ app.post("/buy", async (req, res) => {
   const basket = await fetch("https://plugin.tebex.io/baskets", {
     method: "POST",
     headers: {
-      "X-Tebex-Secret": TEBEX_KEY,
+      "X-Tebex-Secret": 6SOtdoLrwdjjnAwz5DfBhZO3UfwUSGR1,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      complete_url: "https://твой-сайт.github.io/success"
+      complete_url: "https://v01d2025.github.io/voidhub/"
     })
   }).then(r => r.json());
 
   await fetch(`https://plugin.tebex.io/baskets/${basket.ident}/packages`, {
     method: "POST",
     headers: {
-      "X-Tebex-Secret": TEBEX_KEY,
+      "X-Tebex-Secret": 6SOtdoLrwdjjnAwz5DfBhZO3UfwUSGR1,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
