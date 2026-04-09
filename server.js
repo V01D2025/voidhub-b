@@ -1,49 +1,64 @@
-import express from "express";
-import fetch from "node-fetch";
-import cors from "cors";
+const express = require("express");
+const fetch = require("node-fetch");
+const cors = require("cors");
+require("dotenv").config();
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-const TEBEX_KEY = process.env.6SOtdoLrwdjjnAwz5DfBhZO3UfwUSGR1;
+const SECRET = process.env.TEBEX_SECRET;
+const PACKAGE_ID = 7380254;
 
-app.get("/store", async (req, res) => {
-  const r = await fetch("https://plugin.tebex.io/categories", {
-    headers: { "X-Tebex-Secret": 6SOtdoLrwdjjnAwz5DfBhZO3UfwUSGR1 }
-  });
-  res.json(await r.json());
+app.post("/create-checkout", async (req, res) => {
+  try {
+    const { username } = req.body;
+
+    if (!username) {
+      return res.status(400).json({ error: "No username" });
+    }
+
+    // create basket
+    const basketRes = await fetch("https://headless.tebex.io/api/baskets", {
+      method: "POST",
+      headers: {
+        "X-Tebex-Secret": SECRET,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ username })
+    });
+
+    const basket = await basketRes.json();
+    const basketId = basket.data.ident;
+
+    // add package
+    await fetch(`https://headless.tebex.io/api/baskets/${basketId}/packages`, {
+      method: "POST",
+      headers: {
+        "X-Tebex-Secret": SECRET,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        package_id: PACKAGE_ID
+      })
+    });
+
+    // get checkout
+    const checkoutRes = await fetch(
+      `https://headless.tebex.io/api/baskets/${basketId}`,
+      {
+        headers: { "X-Tebex-Secret": SECRET }
+      }
+    );
+
+    const checkout = await checkoutRes.json();
+
+    res.json({ url: checkout.data.links.checkout });
+
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
-app.post("/buy", async (req, res) => {
-  const { username, packageId } = req.body;
-
-  const basket = await fetch("https://plugin.tebex.io/baskets", {
-    method: "POST",
-    headers: {
-      "X-Tebex-Secret": 6SOtdoLrwdjjnAwz5DfBhZO3UfwUSGR1,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      complete_url: "https://v01d2025.github.io/voidhub/"
-    })
-  }).then(r => r.json());
-
-  await fetch(`https://plugin.tebex.io/baskets/${basket.ident}/packages`, {
-    method: "POST",
-    headers: {
-      "X-Tebex-Secret": 6SOtdoLrwdjjnAwz5DfBhZO3UfwUSGR1,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      package_id: packageId,
-      username: username
-    })
-  });
-
-  res.json({
-    url: `https://checkout.tebex.io/checkout/${basket.ident}`
-  });
-});
-
-app.listen(10000);
+app.listen(3000, () => console.log("Server running"));
