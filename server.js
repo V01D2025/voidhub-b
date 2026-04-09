@@ -1,33 +1,59 @@
 const express = require("express");
 const cors = require("cors");
+require("dotenv").config();
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// Проверка сервера
 app.get("/", (req, res) => {
-  res.send("OK");
+  res.send("VoidHub backend running");
 });
 
-// Создание checkout (ПОКА ТЕСТ)
+/**
+ * CREATE CHECKOUT
+ */
 app.post("/create-checkout", async (req, res) => {
   try {
-    const { username } = req.body;
+    const { username, packageId } = req.body;
 
-    if (!username) {
-      return res.status(400).json({ error: "No username" });
+    if (!username || !packageId) {
+      return res.status(400).json({
+        error: "username or packageId missing"
+      });
     }
 
-    // Пока просто редирект на Tebex (тест)
-    return res.json({
-      url: "https://checkout.tebex.io/"
+    const tebexResponse = await fetch("https://plugin.tebex.io/payments", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Tebex-Secret": process.env.TEBEX_SECRET
+      },
+      body: JSON.stringify({
+        package_id: packageId,
+        username: username,
+        complete_url: "https://your-site.com/success",
+        cancel_url: "https://your-site.com/cancel"
+      })
+    });
+
+    const data = await tebexResponse.json();
+
+    if (!data?.links?.checkout) {
+      return res.status(500).json({
+        error: "Tebex checkout failed",
+        debug: data
+      });
+    }
+
+    res.json({
+      url: data.links.checkout
     });
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: "server error" });
   }
 });
 
