@@ -4,61 +4,39 @@ require("dotenv").config();
 
 const app = express();
 
-app.use(cors());
+// ===== MIDDLEWARE =====
+app.use(cors({
+  origin: "*", // можно потом заменить на твой домен
+  methods: ["GET", "POST"],
+}));
+
 app.use(express.json());
 
+// ===== TEST ROUTE (Render check) =====
 app.get("/", (req, res) => {
-  res.send("VoidHub backend running");
+  res.send("Tebex backend is running");
 });
 
-/**
- * CREATE CHECKOUT
- */
-app.post("/create-checkout", async (req, res) => {
-  try {
-    const { username, packageId } = req.body;
+// ===== CREATE CHECKOUT LINK =====
+// сюда фронт будет отправлять ник игрока + товар
+app.post("/create-checkout", (req, res) => {
+  const { username, packageId } = req.body;
 
-    if (!username || !packageId) {
-      return res.status(400).json({
-        error: "username or packageId missing"
-      });
-    }
-
-    const tebexResponse = await fetch("https://plugin.tebex.io/payments", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Tebex-Secret": process.env.TEBEX_SECRET
-      },
-      body: JSON.stringify({
-        package_id: packageId,
-        username: username,
-        complete_url: "https://your-site.com/success",
-        cancel_url: "https://your-site.com/cancel"
-      })
-    });
-
-    const data = await tebexResponse.json();
-
-    if (!data?.links?.checkout) {
-      return res.status(500).json({
-        error: "Tebex checkout failed",
-        debug: data
-      });
-    }
-
-    res.json({
-      url: data.links.checkout
-    });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "server error" });
+  if (!username || !packageId) {
+    return res.status(400).json({ error: "Missing username or packageId" });
   }
+
+  // Tebex checkout URL
+  const tebexUrl = `https://checkout.tebex.io/${process.env.TEBEX_STORE_ID}/package/${packageId}?username=${encodeURIComponent(username)}`;
+
+  return res.json({
+    url: tebexUrl
+  });
 });
 
+// ===== START SERVER =====
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log("Server started on port " + PORT);
+  console.log(`Server running on port ${PORT}`);
 });
