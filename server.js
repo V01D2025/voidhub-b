@@ -22,7 +22,8 @@ app.post("/create-checkout", (req, res) => {
     return res.status(400).json({ error: "Missing username or packageId" });
   }
 
-  const tebexUrl = `https://checkout.tebex.io/${process.env.TEBEX_STORE_ID}/package/${packageId}?username=${encodeURIComponent(username)}`;
+  // 👉 ВОТ ЭТА СТРОКА ГЛАВНАЯ
+  const tebexUrl = `https://checkout.tebex.io/checkout/packages/${packageId}?username=${encodeURIComponent(username)}`;
 
   res.json({ url: tebexUrl });
 });
