@@ -1,35 +1,74 @@
-const express = require("express");
-const cors = require("cors");
-require("dotenv").config();
+const express = require('express');
+const fetch = require('node-fetch');
+const cors = require('cors');
+require('dotenv').config();
 
 const app = express();
 
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST"]
-}));
-
+// 🔐 Middleware
+app.use(cors());
 app.use(express.json());
 
-app.get("/", (req, res) => {
-  res.send("Tebex backend is running");
-});
+// ⚠️ Берём ключ из .env
+const TEBEX_SECRET = process.env.TEBEX_SECRET;
 
-app.post("/create-checkout", (req, res) => {
-  const { username, packageId } = req.body;
+if (!TEBEX_SECRET) {
+  console.error("❌ Нет TEBEX_SECRET в .env");
+  process.exit(1);
+}
 
-  if (!username || !packageId) {
-    return res.status(400).json({ error: "Missing username or packageId" });
+// 🧠 ROUTE
+app.post('/create-checkout', async (req, res) => {
+  try {
+    const { username, packageId } = req.body;
+
+    if (!username || !packageId) {
+      return res.status(400).json({ error: 'Нет username или packageId' });
+    }
+
+    // 📡 Запрос к Tebex
+    const tebexRes = await fetch('https://plugin.tebex.io/checkout', {
+      method: 'POST',
+      headers: {
+        'X-Tebex-Secret': TEBEX_SECRET,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        basket: {
+          username: username,
+          complete_url: 'hhttps://v01d2025.github.io/voidhub/',
+          cancel_url: 'https://v01d2025.github.io/voidhub/'
+        },
+        packages: [
+          { id: packageId }
+        ]
+      })
+    });
+
+    const data = await tebexRes.json();
+
+    // 🔴 Если Tebex не вернул ссылку
+    if (!data.data || !data.data.url) {
+      console.error("❌ Tebex error:", data);
+      return res.status(500).json({ error: 'Tebex не дал ссылку', details: data });
+    }
+
+    // ✅ Всё ок
+    res.json({ url: data.data.url });
+
+  } catch (err) {
+    console.error("❌ Server error:", err);
+    res.status(500).json({ error: err.message });
   }
-
-  // 👉 ВОТ ЭТА СТРОКА ГЛАВНАЯ
-  const tebexUrl = `https://checkout.tebex.io/checkout/packages/${packageId}?username=${encodeURIComponent(username)}`;
-
-  res.json({ url: tebexUrl });
 });
 
-const PORT = process.env.PORT || 3000;
+// 🌍 Проверка (чтобы не было "Cannot GET")
+app.get('/', (req, res) => {
+  res.send('VoidHub Backend работает 🚀');
+});
 
+// 🚀 PORT (ВАЖНО для Render)
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("Server started");
+  console.log(`✅ Server запущен на порту ${PORT}`);
 });
